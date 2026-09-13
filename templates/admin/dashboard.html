@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}{{ t('admin_dashboard') }}{% endblock %}
+{% block content %}
+<h1>{{ t('admin_dashboard') }}</h1>
+
+<div class="stats-grid">
+    <div class="stat-card"><div class="stat-num">{{ stats.teachers }}</div><div class="stat-label">{{ t('teachers') }}</div></div>
+    <div class="stat-card"><div class="stat-num">{{ stats.students }}</div><div class="stat-label">{{ t('students') }}</div></div>
+    <div class="stat-card"><div class="stat-num">{{ stats.exams }}</div><div class="stat-label">{{ t('exams') }}</div></div>
+    <div class="stat-card"><div class="stat-num">{{ stats.submissions }}</div><div class="stat-label">{{ t('submissions') }}</div></div>
+    <div class="stat-card"><div class="stat-num">{{ stats.subjects }}</div><div class="stat-label">{{ t('subjects') }}</div></div>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
+    <div class="card">
+        <h3>{{ t('pass_fail_chart_title') }}</h3>
+        {% if chart_data.has_submissions_data %}
+        <canvas id="passFailChart" height="180"></canvas>
+        {% else %}
+        <p style="color:#94a3b8; text-align:center; padding:30px 0;">📊 {{ t('no_data_yet_submissions') }}</p>
+        {% endif %}
+    </div>
+    <div class="card">
+        <h3>{{ t('exam_status_chart_title') }}</h3>
+        {% if chart_data.has_exams_data %}
+        <canvas id="examStatusChart" height="180"></canvas>
+        {% else %}
+        <p style="color:#94a3b8; text-align:center; padding:30px 0;">📊 {{ t('no_data_yet_exams') }}</p>
+        {% endif %}
+    </div>
+    <div class="card" style="grid-column: 1 / -1;">
+        <h3>{{ t('activity_chart_title') }}</h3>
+        {% if chart_data.has_activity_data %}
+        <canvas id="activityChart" height="90"></canvas>
+        {% else %}
+        <p style="color:#94a3b8; text-align:center; padding:30px 0;">📊 {{ t('no_data_yet_activity') }}</p>
+        {% endif %}
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+    if (typeof Chart !== 'undefined') {
+        {% if chart_data.has_submissions_data %}
+        new Chart(document.getElementById('passFailChart'), {
+            type: 'doughnut',
+            data: {
+                labels: [{{ t('pass_label')|tojson }}, {{ t('fail_label')|tojson }}],
+                datasets: [{ data: [{{ chart_data.pass_count }}, {{ chart_data.fail_count }}], backgroundColor: ['#16a34a', '#dc2626'] }]
+            },
+            options: { responsive: true }
+        });
+        {% endif %}
+
+        {% if chart_data.has_exams_data %}
+        new Chart(document.getElementById('examStatusChart'), {
+            type: 'doughnut',
+            data: {
+                labels: [{{ t('exam_status_draft')|tojson }}, {{ t('exam_status_published')|tojson }}],
+                datasets: [{ data: [{{ chart_data.draft_count }}, {{ chart_data.published_count }}], backgroundColor: ['#d97706', '#2563eb'] }]
+            },
+            options: { responsive: true }
+        });
+        {% endif %}
+
+        {% if chart_data.has_activity_data %}
+        new Chart(document.getElementById('activityChart'), {
+            type: 'line',
+            data: {
+                labels: {{ chart_data.daily_labels|tojson }},
+                datasets: [{ label: {{ t('submissions')|tojson }}, data: {{ chart_data.daily_counts|tojson }},
+                             borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.1)', fill: true, tension: 0.3 }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+        {% endif %}
+    }
+</script>
+
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h2>{{ t('recent_activity') }}</h2>
+        <a href="{{ url_for('admin_audit_log') }}" class="btn btn-secondary btn-sm">{{ t('view_audit_log') }}</a>
+        <a href="{{ url_for('admin_backup_database') }}" class="btn btn-secondary btn-sm">💾 {{ t('download_backup_btn') }}</a>
+    </div>
+    <table>
+        <thead><tr><th>{{ t('audit_time_col') }}</th><th>{{ t('audit_user_col') }}</th><th>{{ t('audit_action_col') }}</th><th>{{ t('audit_details_col') }}</th></tr></thead>
+        <tbody>
+        {% for log in recent_logs %}
+            <tr>
+                <td>{{ log.created_at }}</td>
+                <td>{{ log.user_name or '—' }}</td>
+                <td><code>{{ log.action }}</code></td>
+                <td>{{ log.details }}</td>
+            </tr>
+        {% else %}
+            <tr><td colspan="4">{{ t('no_audit_logs') }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h2>{{ t('users') }}</h2>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <label style="margin:0; font-weight:600;">{{ t('filter_by_role') }}</label>
+            <select id="role-filter" onchange="filterUsersByRole()" style="width:auto;">
+                <option value="all">{{ t('all_roles') }}</option>
+                <option value="teachers">{{ t('role_teacher') }}</option>
+                <option value="students">{{ t('role_student') }}</option>
+                <option value="admins">{{ t('role_admin') }}</option>
+            </select>
+            <input type="text" id="user-search" onkeyup="filterUsersBySearch()" placeholder="{{ t('search_users_placeholder') }}" style="width:180px;">
+            <a href="{{ url_for('admin_create_user') }}" class="btn btn-primary">{{ t('add_user') }}</a>
+            <a href="{{ url_for('admin_generate_users') }}" class="btn btn-secondary">{{ t('generate_users_btn') }}</a>
+            <a href="{{ url_for('admin_subjects') }}" class="btn btn-secondary">📚 {{ t('subjects_title') }}</a>
+        </div>
+    </div>
+</div>
+
+{% macro user_table(users) %}
+    <table>
+        <thead>
+            <tr><th>{{ t('full_name') }}</th><th>{{ t('username') }}</th><th>{{ t('status') }}</th><th>{{ t('last_login_col') }}</th><th>{{ t('actions') }}</th></tr>
+        </thead>
+        <tbody>
+        {% for u in users %}
+            <tr class="user-row">
+                <td>{{ u.full_name }}</td>
+                <td>{{ u.username }}</td>
+                <td>
+                    {% if u.is_active_user %}<span class="badge" style="background:#dcfce7;color:#166534;">{{ t('active') }}</span>
+                    {% else %}<span class="badge" style="background:#fee2e2;color:#991b1b;">{{ t('suspended') }}</span>{% endif %}
+                </td>
+                <td>{{ u.last_login_at or '—' }}</td>
+                <td>
+                    {% if u.role != 'admin' %}
+                    <form method="POST" action="{{ url_for('admin_toggle_user', user_id=u.id) }}" style="display:inline;">
+                        <button class="btn btn-secondary btn-sm">{{ t('suspend') if u.is_active_user else t('activate') }}</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('admin_delete_user', user_id=u.id) }}" style="display:inline;"
+                          onsubmit="return confirm('{{ t('confirm_delete_user') }}');">
+                        <button class="btn btn-danger btn-sm">{{ t('delete') }}</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+        {% else %}
+            <tr><td colspan="5">{{ t('no_users_in_group') }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endmacro %}
+
+<div class="card user-role-section" id="section-teachers">
+    <h3>👨‍🏫 {{ t('role_teacher') }} ({{ teachers|length }})</h3>
+    {{ user_table(teachers) }}
+</div>
+
+<div class="card user-role-section" id="section-students">
+    <h3>🎓 {{ t('role_student') }} ({{ students|length }})</h3>
+    {{ user_table(students) }}
+</div>
+
+<div class="card user-role-section" id="section-admins">
+    <h3>🛡️ {{ t('role_admin') }} ({{ admins|length }})</h3>
+    {{ user_table(admins) }}
+</div>
+
+<script>
+function filterUsersByRole() {
+    const value = document.getElementById('role-filter').value;
+    const sections = {
+        teachers: document.getElementById('section-teachers'),
+        students: document.getElementById('section-students'),
+        admins: document.getElementById('section-admins'),
+    };
+    Object.keys(sections).forEach(function (key) {
+        sections[key].style.display = (value === 'all' || value === key) ? 'block' : 'none';
+    });
+}
+
+function filterUsersBySearch() {
+    const query = document.getElementById('user-search').value.trim().toLowerCase();
+    document.querySelectorAll('.user-row').forEach(function (row) {
+        const matches = row.textContent.toLowerCase().includes(query);
+        row.style.display = matches ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

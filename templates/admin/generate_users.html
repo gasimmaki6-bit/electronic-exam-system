@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}{{ t('generate_bulk_title') }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width:600px;">
+    <h2>{{ t('generate_bulk_title') }}</h2>
+    <p style="color:#64748b;">{{ t('generate_bulk_desc') }}</p>
+    <form method="POST" id="generate-form">
+        <div class="form-group">
+            <label>{{ t('role') }}</label>
+            <select name="role">
+                <option value="student">{{ t('role_student') }}</option>
+                <option value="teacher">{{ t('role_teacher') }}</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>{{ t('count_accounts') }}</label>
+            <input type="number" name="count" value="10" min="1" max="1000" required>
+            <small style="color:#64748b;">{{ t('count_accounts_hint') }}</small>
+        </div>
+        <div class="form-group">
+            <label>{{ t('name_prefix') }}</label>
+            <input type="text" name="name_prefix">
+            <small style="color:#64748b;">{{ t('name_prefix_hint') }}</small>
+        </div>
+        <button type="submit" class="btn btn-primary" id="generate-submit-btn">{{ t('generate_btn') }}</button>
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">{{ t('back') }}</a>
+    </form>
+</div>
+
+<script>
+    document.getElementById('generate-form').addEventListener('submit', function () {
+        var count = parseInt(this.count.value || '0', 10);
+        var btn = document.getElementById('generate-submit-btn');
+        if (count > 100) {
+            btn.disabled = true;
+            btn.textContent = "{{ t('generating_please_wait') }}";
+        }
+    });
+</script>
+
+{% if generated %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h3>✅ {{ t('generated_success', count=generated|length) }}</h3>
+        <div>
+            <button class="btn btn-primary btn-sm" onclick="downloadGeneratedCsv()">⬇️ {{ t('download_csv_btn') }}</button>
+            <button class="btn btn-secondary btn-sm" onclick="window.print()">{{ t('print_save') }}</button>
+        </div>
+    </div>
+    <p style="color:#dc2626; font-weight:700;">{{ t('save_now_warning') }}</p>
+
+    {% if generated|length > 50 %}
+    <div class="form-group">
+        <input type="text" id="generated-search" onkeyup="filterGeneratedTable()" placeholder="{{ t('search_generated_placeholder') }}">
+    </div>
+    {% endif %}
+
+    <div style="max-height:500px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:6px;">
+        <table id="generated-table">
+            <thead><tr><th>{{ t('full_name') }}</th><th>{{ t('username') }}</th><th>{{ t('password') }}</th></tr></thead>
+            <tbody>
+            {% for u in generated %}
+                <tr class="generated-row">
+                    <td>{{ u.full_name }}</td>
+                    <td><code>{{ u.username }}</code></td>
+                    <td><code>{{ u.password }}</code></td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function filterGeneratedTable() {
+    var query = document.getElementById('generated-search').value.trim().toLowerCase();
+    document.querySelectorAll('#generated-table .generated-row').forEach(function (row) {
+        row.style.display = row.textContent.toLowerCase().includes(query) ? '' : 'none';
+    });
+}
+
+function downloadGeneratedCsv() {
+    var rows = [["{{ t('full_name') }}", "{{ t('username') }}", "{{ t('password') }}"]];
+    document.querySelectorAll('#generated-table .generated-row').forEach(function (row) {
+        var cells = row.querySelectorAll('td');
+        rows.push([cells[0].textContent.trim(), cells[1].textContent.trim(), cells[2].textContent.trim()]);
+    });
+    var csvContent = rows.map(function (r) {
+        return r.map(function (cell) { return '"' + cell.replace(/"/g, '""') + '"'; }).join(',');
+    }).join('\r\n');
+
+    var blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'generated_accounts.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+</script>
+{% endif %}
+{% endblock %}

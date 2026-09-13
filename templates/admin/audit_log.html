@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ t('audit_log_title') }}{% endblock %}
+{% block content %}
+<h1>{{ t('audit_log_title') }} ({{ logs|length }})</h1>
+<a href="{{ url_for('admin_audit_log_export') }}" class="btn btn-secondary btn-sm" style="margin-bottom:10px; display:inline-block;">⬇️ {{ t('export_csv') }}</a>
+
+<div class="card">
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+        <select id="action-filter" onchange="filterAuditLog()" style="width:auto;">
+            <option value="">{{ t('all_actions_filter') }}</option>
+            {% for a in distinct_actions %}
+            <option value="{{ a }}">{{ a }}</option>
+            {% endfor %}
+        </select>
+        <select id="role-filter-log" onchange="filterAuditLog()" style="width:auto;">
+            <option value="">{{ t('all_roles') }}</option>
+            <option value="admin">{{ t('role_admin') }}</option>
+            <option value="teacher">{{ t('role_teacher') }}</option>
+            <option value="student">{{ t('role_student') }}</option>
+        </select>
+        <input type="text" id="log-search" onkeyup="filterAuditLog()" placeholder="{{ t('search_log_placeholder') }}" style="max-width:220px;">
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>{{ t('audit_time_col') }}</th><th>{{ t('audit_user_col') }}</th>
+                <th>{{ t('audit_role_col') }}</th><th>{{ t('audit_action_col') }}</th><th>{{ t('audit_details_col') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for log in logs %}
+            <tr class="log-row" data-action="{{ log.action }}" data-role="{{ log.user_role or '' }}">
+                <td>{{ log.created_at }}</td>
+                <td>{{ log.user_name or '—' }}</td>
+                <td>
+                    {% if log.user_role == 'admin' %}<span class="badge badge-admin">{{ t('role_admin') }}</span>
+                    {% elif log.user_role == 'teacher' %}<span class="badge badge-teacher">{{ t('role_teacher') }}</span>
+                    {% elif log.user_role == 'student' %}<span class="badge badge-student">{{ t('role_student') }}</span>
+                    {% else %}—{% endif %}
+                </td>
+                <td><code>{{ log.action }}</code></td>
+                <td>{{ log.details }}</td>
+            </tr>
+        {% else %}
+            <tr><td colspan="5">{{ t('no_audit_logs') }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function filterAuditLog() {
+    var action = document.getElementById('action-filter').value;
+    var role = document.getElementById('role-filter-log').value;
+    var query = document.getElementById('log-search').value.trim().toLowerCase();
+    document.querySelectorAll('.log-row').forEach(function (row) {
+        var matchesAction = !action || row.dataset.action === action;
+        var matchesRole = !role || row.dataset.role === role;
+        var matchesSearch = !query || row.textContent.toLowerCase().includes(query);
+        row.style.display = (matchesAction && matchesRole && matchesSearch) ? '' : 'none';
+    });
+}
+</script>
+
+<a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">{{ t('back') }}</a>
+{% endblock %}

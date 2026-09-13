@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ t('create_new_user') }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width:500px;">
+    <h2>{{ t('create_new_user') }}</h2>
+    <form method="POST">
+        <div class="form-group">
+            <label>{{ t('full_name') }}</label>
+            <input type="text" name="full_name" id="full_name" required>
+        </div>
+        <div class="form-group">
+            <label>{{ t('username') }}</label>
+            <div style="display:flex; gap:8px;">
+                <input type="text" name="username" id="username" required style="flex:1;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="autoGenerate()">{{ t('auto_generate') }}</button>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>{{ t('password') }}</label>
+            <input type="text" name="password" id="password" required>
+        </div>
+        <div class="form-group">
+            <label>{{ t('role') }}</label>
+            <select name="role">
+                <option value="student">{{ t('role_student') }}</option>
+                <option value="teacher">{{ t('role_teacher') }}</option>
+                <option value="admin">{{ t('role_admin') }}</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">{{ t('create') }}</button>
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">{{ t('cancel') }}</a>
+        <a href="{{ url_for('admin_generate_users') }}" class="btn btn-secondary">{{ t('generate_bulk_single') }}</a>
+    </form>
+
+    <script>
+        function autoGenerate() {
+            const rand = Math.floor(1000 + Math.random() * 900000);
+            document.getElementById('username').value = 'user' + rand;
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+            let pass = '';
+            for (let i = 0; i < 8; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
+            document.getElementById('password').value = pass;
+        }
+    </script>
+</div>
+{% endblock %}

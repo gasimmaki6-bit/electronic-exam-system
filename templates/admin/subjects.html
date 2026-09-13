@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ t('subjects_title') }}{% endblock %}
+{% block content %}
+<h1>{{ t('subjects_title') }}</h1>
+
+<div class="card" style="max-width:600px;">
+    <h3>{{ t('add_subject') }}</h3>
+    <form method="POST">
+        <div class="form-group">
+            <label>{{ t('subject_name') }}</label>
+            <input type="text" name="name" required>
+        </div>
+        <div class="form-group">
+            <label>{{ t('subject_code') }}</label>
+            <input type="text" name="code">
+        </div>
+        <div class="form-group">
+            <label>{{ t('subject_description') }}</label>
+            <textarea name="description" rows="2"></textarea>
+        </div>
+        <div class="form-group">
+            <label>{{ t('assigned_teacher') }}</label>
+            <select name="teacher_id">
+                <option value="">{{ t('no_teacher_assigned') }}</option>
+                {% for tch in teachers %}
+                <option value="{{ tch.id }}">{{ tch.full_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">{{ t('create_subject_btn') }}</button>
+    </form>
+</div>
+
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h3>{{ t('subjects_title') }} ({{ subjects|length }})</h3>
+        <select id="teacher-filter" onchange="filterSubjects()" style="width:auto;">
+            <option value="">{{ t('all_teachers_filter') }}</option>
+            {% for tch in teachers %}
+            <option value="{{ tch.full_name }}">{{ tch.full_name }}</option>
+            {% endfor %}
+            <option value="{{ t('no_teacher_assigned') }}">{{ t('no_teacher_assigned') }}</option>
+        </select>
+        <input type="text" id="subject-search" onkeyup="filterSubjects()" placeholder="{{ t('search_subjects_placeholder') }}" style="max-width:220px;">
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>{{ t('subject_name') }}</th><th>{{ t('subject_code') }}</th>
+                <th>{{ t('assigned_teacher') }}</th><th>{{ t('exams_count_col') }}</th><th>{{ t('actions') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for s in subjects %}
+            <tr class="subject-row" data-teacher="{{ s.teacher.full_name if s.teacher else t('no_teacher_assigned') }}">
+                <td>{{ s.name }}</td>
+                <td>{{ s.code or '—' }}</td>
+                <td>{{ s.teacher.full_name if s.teacher else t('no_teacher_assigned') }}</td>
+                <td>{{ s.exams|length }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('admin_delete_subject', subject_id=s.id) }}"
+                          onsubmit="return confirm('{{ t('confirm_delete_subject') }}');">
+                        <button class="btn btn-danger btn-sm">{{ t('delete') }}</button>
+                    </form>
+                </td>
+            </tr>
+        {% else %}
+            <tr><td colspan="5">{{ t('no_subjects_yet') }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function filterSubjects() {
+    var teacher = document.getElementById('teacher-filter').value;
+    var query = document.getElementById('subject-search').value.trim().toLowerCase();
+    document.querySelectorAll('.subject-row').forEach(function (row) {
+        var matchesTeacher = !teacher || row.dataset.teacher === teacher;
+        var matchesSearch = !query || row.textContent.toLowerCase().includes(query);
+        row.style.display = (matchesTeacher && matchesSearch) ? '' : 'none';
+    });
+}
+</script>
+
+<a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">{{ t('back') }}</a>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ t('result_title') }} {{ submission.exam.title }}{% endblock %}
+{% block content %}
+<div class="card" style="text-align:center;">
+    <h1>{{ t('result_title') }}: {{ submission.exam.title }}</h1>
+
+    {% if submission.needs_manual_grading and not submission.manually_graded %}
+        <div class="badge badge-warn" style="font-size:14px; padding:8px 16px;">
+            {{ t('partial_grading_note') }}
+        </div>
+        <div class="stat-num" style="font-size:40px; margin-top:12px;">
+            {{ submission.auto_score }} / {{ submission.total_points }} {{ t('partial_label') }}
+        </div>
+    {% else %}
+        <div class="stat-num" style="font-size:48px;">{{ submission.score }} / {{ submission.total_points }}</div>
+        <p style="font-size:20px;">{{ t('percentage_label') }}: {{ submission.percentage }}%</p>
+    {% endif %}
+
+    {% if submission.auto_submitted %}
+    <p class="badge badge-warn">{{ t('auto_submit_violation_note') }} ({{ submission.violation_count }})</p>
+    {% endif %}
+    <p>{{ t('submitted_at_label') }}: {{ submission.submitted_at }}</p>
+    <button onclick="window.print()" class="btn btn-secondary" style="margin-top:10px;">🖨️ {{ t('print_result_btn') }}</button>
+</div>
+<a href="{{ url_for('student_dashboard') }}" class="btn btn-primary">{{ t('back_to_exams') }}</a>
+<a href="{{ url_for('student_grades') }}" class="btn btn-secondary">{{ t('view_all_grades') }}</a>
+{% endblock %}

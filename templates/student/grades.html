@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ t('grades_title') }}{% endblock %}
+{% block content %}
+<h1>{{ t('grades_title') }}</h1>
+
+{% if submissions %}
+<div class="stats-grid">
+    <div class="stat-card"><div class="stat-num">{{ submissions|length }}</div><div class="stat-label">{{ t('exams_taken') }}</div></div>
+    <div class="stat-card"><div class="stat-num">{{ avg_pct }}%</div><div class="stat-label">{{ t('overall_avg') }}</div></div>
+</div>
+
+<div class="card">
+    <table>
+        <thead>
+            <tr><th>{{ t('exam_col') }}</th><th>{{ t('score_col') }}</th><th>{{ t('percentage_col') }}</th><th>{{ t('date_col') }}</th><th>{{ t('status_col') }}</th></tr>
+        </thead>
+        <tbody>
+        {% for s in submissions %}
+            <tr>
+                <td>{{ s.exam.title }}</td>
+                <td>{{ s.score }} / {{ s.total_points }}</td>
+                <td>
+                    <span class="badge {{ 'badge-student' if s.percentage >= 50 else 'badge-admin' }}">{{ s.percentage }}%</span>
+                </td>
+                <td>{{ s.submitted_at }}</td>
+                <td>
+                    {% if s.needs_manual_grading and not s.manually_graded %}
+                        <span class="badge badge-warn">{{ t('pending_grading') }}</span>
+                    {% else %}
+                        <span class="badge" style="background:#dcfce7;color:#166534;">{{ t('completed') }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">{{ t('no_exams_taken') }}</div>
+{% endif %}
+
+<a href="{{ url_for('student_dashboard') }}" class="btn btn-secondary">{{ t('back_to_exams') }}</a>
+{% endblock %}

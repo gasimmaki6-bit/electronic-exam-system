@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}{{ t('exams_title') }}{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <h1>{{ t('exams_title') }}</h1>
+    <a href="{{ url_for('student_grades') }}" class="btn btn-primary">{{ t('my_grades_btn') }}</a>
+</div>
+
+<h2>{{ t('available_now') }} ({{ available|length }})</h2>
+
+{% if available|length > 5 %}
+<div class="card">
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <select id="subject-filter-student" onchange="filterAvailableExams()" style="width:auto;">
+            <option value="">{{ t('all_subjects') }}</option>
+            {% for subj in subjects %}
+            <option value="{{ subj.name }}">{{ subj.name }}</option>
+            {% endfor %}
+        </select>
+        <input type="text" id="exam-search-student" onkeyup="filterAvailableExams()" placeholder="{{ t('search_exams_placeholder') }}" style="max-width:220px;">
+    </div>
+</div>
+{% endif %}
+
+{% for exam, submission in available %}
+<div class="card available-exam-row" data-subject="{{ exam.subject.name if exam.subject else '' }}">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div>
+            <h3>{{ exam.title }} {% if exam.subject %}<span class="badge badge-teacher">📚 {{ exam.subject.name }}</span>{% endif %}</h3>
+            <p>{{ exam.description }}</p>
+            <p>{{ t('duration') }}: {{ exam.duration_minutes }} {{ t('minutes') }} | {{ t('questions_count') }}: {{ exam.questions|length }} | {{ t('total_points_label') }}: {{ exam.total_points }}</p>
+            <span class="badge badge-student">{{ t('available_badge') }}</span>
+        </div>
+        <div>
+            <form method="POST" action="{{ url_for('student_start_exam', exam_id=exam.id) }}">
+                <button class="btn btn-primary">
+                    {{ t('resume_exam') if submission else t('start_exam') }}
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card">{{ t('no_available_exams') }}</div>
+{% endfor %}
+
+<script>
+function filterAvailableExams() {
+    var subject = document.getElementById('subject-filter-student') ? document.getElementById('subject-filter-student').value : '';
+    var query = document.getElementById('exam-search-student') ? document.getElementById('exam-search-student').value.trim().toLowerCase() : '';
+    document.querySelectorAll('.available-exam-row').forEach(function (row) {
+        var matchesSubject = !subject || row.dataset.subject === subject;
+        var matchesSearch = !query || row.textContent.toLowerCase().includes(query);
+        row.style.display = (matchesSubject && matchesSearch) ? '' : 'none';
+    });
+}
+</script>
+
+<h2 style="margin-top:28px;">{{ t('upcoming_exams') }}</h2>
+{% if upcoming %}
+<div class="card">
+    <table>
+        <thead><tr><th>{{ t('exam_title_col') }}</th><th>{{ t('start_date_col') }}</th><th>{{ t('end_date_col') }}</th><th>{{ t('duration') }}</th></tr></thead>
+        <tbody>
+        {% for exam, submission in upcoming %}
+            <tr>
+                <td>{{ exam.title }}</td>
+                <td>{{ exam.start_time }}</td>
+                <td>{{ exam.end_time or '—' }}</td>
+                <td>{{ exam.duration_minutes }} {{ t('minutes') }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">{{ t('no_upcoming_exams') }}</div>
+{% endif %}
+{% endblock %}

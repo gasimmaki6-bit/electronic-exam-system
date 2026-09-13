@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}{{ exam.title }}{% endblock %}
+{% block content %}
+
+<!-- طبقة حاجزة تغطي الشاشة بالكامل فور تحميل الصفحة، وتطلب دخول وضع ملء الشاشة فوراً
+     قبل السماح بالتفاعل مع الامتحان. لا يمكن للمتصفحات تفعيل ملء الشاشة تلقائياً بدون
+     نقرة من المستخدم (قيد أمني في كل المتصفحات الحديثة)، لذا هذه أقرب طريقة ممكنة تقنياً
+     لجعل الانتقال لملء الشاشة "فورياً" — نقرة واحدة إجبارية بدل زر اختياري قد يُتجاهل. -->
+<div id="fullscreen-gate" style="position:fixed; inset:0; background:rgba(15,23,42,0.92); z-index:9999;
+     display:flex; align-items:center; justify-content:center; padding:20px;">
+    <div class="card" style="max-width:480px; text-align:center;">
+        <h2 style="margin-top:0;">🔒 {{ exam.title }}</h2>
+        <p style="font-weight:700;">{{ t('cheating_warning') }}</p>
+        <button id="start-fullscreen-btn" class="btn btn-primary" style="width:100%; padding:14px; font-size:16px;">
+            {{ t('start_fullscreen_btn') }}
+        </button>
+    </div>
+</div>
+
+<div id="timer-display" class="timer-box">…</div>
+<div id="violation-box" class="violation-box"><span id="violation-text"></span></div>
+
+<h1 class="no-select">{{ exam.title }}</h1>
+
+<form id="exam-form" method="POST" action="{{ url_for('student_submit_exam', submission_id=submission.id) }}" class="no-select">
+    <input type="hidden" id="auto_submitted_input" name="auto_submitted" value="0">
+
+    {% for q in questions %}
+    <div class="question-card">
+        <b>{{ loop.index }}. {{ q.text }}</b>
+        <span class="badge" style="background:#e2e8f0;color:#334155;">{{ q.points }} {{ t('points') }}</span>
+
+        {% if q.image_url %}
+        <div style="margin:10px 0;">
+            <img src="{{ url_for('static', filename=q.image_url) }}" style="max-width:100%; max-height:350px; border-radius:8px; border:1px solid #e2e8f0;">
+        </div>
+        {% endif %}
+
+        {% if q.type == 'mcq' %}
+            {% for opt_key, opt_text in q.options %}
+            <div class="option-row">
+                <input type="radio" name="question_{{ q.id }}" value="{{ opt_key }}" id="q{{ q.id }}_{{ opt_key }}">
+                <label for="q{{ q.id }}_{{ opt_key }}" style="margin:0; font-weight:normal;">{{ opt_text }}</label>
+            </div>
+            {% endfor %}
+
+        {% elif q.type == 'true_false' %}
+            <div class="option-row">
+                <input type="radio" name="question_{{ q.id }}" value="t" id="q{{ q.id }}_t">
+                <label for="q{{ q.id }}_t" style="margin:0; font-weight:normal;">{{ t('true_label') }}</label>
+            </div>
+            <div class="option-row">
+                <input type="radio" name="question_{{ q.id }}" value="f" id="q{{ q.id }}_f">
+                <label for="q{{ q.id }}_f" style="margin:0; font-weight:normal;">{{ t('false_label') }}</label>
+            </div>
+
+        {% elif q.type == 'essay' %}
+            <textarea name="essay_{{ q.id }}" rows="5" placeholder="{{ t('essay_placeholder') }}" style="width:100%; margin-top:8px;"></textarea>
+            <small style="color:#64748b;">{{ t('essay_manual_hint') }}</small>
+
+        {% elif q.type == 'matching' %}
+            <div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:10px;">
+                <div style="flex:1; min-width:220px;">
+                    <p style="font-weight:700;">{{ t('matching_terms_label') }}</p>
+                    {% for term in q.terms %}
+                    <div class="option-row">
+                        <label style="margin:0; font-weight:normal; flex:1;">{{ term.text }}</label>
+                        <select name="matching_{{ q.id }}_{{ term.index }}" style="width:90px;">
+                            <option value="">—</option>
+                            {% for d in q.definitions %}
+                            <option value="{{ d.original_index }}">{{ d.display_number }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div style="flex:1; min-width:220px;">
+                    <p style="font-weight:700;">{{ t('matching_defs_label') }}</p>
+                    <ol>
+                        {% for d in q.definitions %}
+                        <li>{{ d.text }}</li>
+                        {% endfor %}
+                    </ol>
+                </div>
+            </div>
+
+        {% elif q.type == 'ordering' %}
+            <p style="color:#64748b; margin-top:8px;">{{ t('ordering_hint') }}</p>
+            {% for it in q.ordering_items %}
+            <div class="option-row">
+                <label style="margin:0; font-weight:normal; flex:1;">{{ it.text }}</label>
+                <select name="ordering_{{ q.id }}_{{ it.original_index }}" style="width:110px;">
+                    <option value="">{{ t('ordering_position_placeholder') }}</option>
+                    {% for n in range(1, q.ordering_count + 1) %}
+                    <option value="{{ n }}">{{ n }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endfor %}
+
+        {% elif q.type == 'short_answer' %}
+            <input type="text" name="shortanswer_{{ q.id }}" placeholder="{{ t('short_answer_placeholder') }}" style="width:100%; margin-top:8px;">
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    <button type="button" id="manual-submit-btn" class="btn btn-success" style="width:100%; padding:14px; font-size:16px;">
+        {{ t('submit_exam_btn') }}
+    </button>
+</form>
+
+<script src="{{ url_for('static', filename='js/anticheat.js') }}"></script>
+<script>
+    initAntiCheat({
+        submissionId: {{ submission.id }},
+        violationUrl: "{{ url_for('student_report_violation', submission_id=submission.id) }}",
+        remainingSeconds: {{ remaining }},
+        i18n: {
+            timeRemaining: {{ t('time_remaining')|tojson }},
+            timeUpAlert: {{ t('time_up_alert')|tojson }},
+            violationPrefix: {{ t('violation_alert_prefix')|tojson }},
+            violationCountLabel: {{ t('violation_count_label')|tojson }},
+            violationOf: {{ t('violation_of')|tojson }},
+            forceSubmitAlert: {{ t('force_submit_alert')|tojson }},
+            confirmSubmit: {{ t('confirm_submit')|tojson }},
+            violationTab: {{ t('violation_tab')|tojson }},
+            violationBlur: {{ t('violation_blur')|tojson }},
+            violationFullscreen: {{ t('violation_fullscreen')|tojson }},
+            violationDevtools: {{ t('violation_devtools')|tojson }}
+        }
+    });
+</script>
+{% endblock %}

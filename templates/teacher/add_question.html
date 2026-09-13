@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% block title %}{{ t('add_question_title') }}: {{ exam.title }}{% endblock %}
+{% block content %}
+<h1>{{ t('add_question_title') }}: {{ exam.title }}</h1>
+
+<div class="card" style="{{ 'background:#dcfce7;border-color:#16a34a;' if exam.is_active else 'background:#fef3c7;border-color:#d97706;' }}">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div>
+            <b>
+                {% if exam.is_active %}✅ {{ t('exam_status_published') }}
+                {% else %}📝 {{ t('exam_status_draft') }}{% endif %}
+            </b>
+            <p style="margin:4px 0 0; color:#334155;">
+                {% if exam.is_active %}{{ t('exam_published_hint') }}
+                {% else %}{{ t('exam_draft_hint') }}{% endif %}
+            </p>
+        </div>
+        <form method="POST" action="{{ url_for('teacher_toggle_exam', exam_id=exam.id) }}">
+            <button class="btn {{ 'btn-danger' if exam.is_active else 'btn-success' }}">
+                {{ t('unpublish_exam_btn') if exam.is_active else t('publish_exam_btn') }}
+            </button>
+        </form>
+    </div>
+</div>
+
+<a href="{{ url_for('teacher_add_from_bank', exam_id=exam.id) }}" class="btn btn-secondary" style="margin-bottom:14px; display:inline-block;">{{ t('add_from_bank') }}</a>
+<a href="{{ url_for('teacher_preview_exam', exam_id=exam.id) }}" class="btn btn-secondary" style="margin-bottom:14px; display:inline-block;">👁️ {{ t('preview_exam_btn') }}</a>
+
+<div class="card">
+    <h3>{{ t('add_new_question') }}</h3>
+    <form method="POST" enctype="multipart/form-data" id="question-form">
+        <div class="form-group">
+            <label>{{ t('question_type') }}</label>
+            <select name="question_type" id="question_type" onchange="toggleQuestionType()">
+                <option value="mcq">{{ t('type_mcq') }}</option>
+                <option value="true_false">{{ t('type_true_false') }}</option>
+                <option value="short_answer">{{ t('type_short_answer') }}</option>
+                <option value="essay">{{ t('type_essay') }}</option>
+                <option value="matching">{{ t('type_matching') }}</option>
+                <option value="ordering">{{ t('type_ordering') }}</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>{{ t('question_text') }}</label>
+            <textarea name="text" rows="2" required></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>{{ t('question_image_optional') }}</label>
+            <input type="file" name="image" accept="image/png,image/jpeg,image/gif,image/webp">
+            <small style="color:#64748b;">{{ t('question_image_hint') }}</small>
+        </div>
+
+        <!-- حقول الاختيار من متعدد -->
+        <div id="mcq-fields">
+            <div class="form-group"><label>{{ t('option_a') }}</label><input type="text" name="option_a"></div>
+            <div class="form-group"><label>{{ t('option_b') }}</label><input type="text" name="option_b"></div>
+            <div class="form-group"><label>{{ t('option_c') }}</label><input type="text" name="option_c"></div>
+            <div class="form-group"><label>{{ t('option_d') }}</label><input type="text" name="option_d"></div>
+            <div class="form-group">
+                <label>{{ t('correct_answer') }}</label>
+                <select name="correct_option">
+                    <option value="a">أ / A</option>
+                    <option value="b">ب / B</option>
+                    <option value="c">ج / C</option>
+                    <option value="d">د / D</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- حقول سؤال صح أو خطأ -->
+        <div id="true-false-fields" style="display:none;">
+            <div class="form-group">
+                <label>{{ t('true_false_correct_answer') }}</label>
+                <select name="true_false_correct">
+                    <option value="t">{{ t('true_label') }}</option>
+                    <option value="f">{{ t('false_label') }}</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- حقول سؤال التوصيل -->
+        <div id="matching-fields" style="display:none;">
+            <label>{{ t('matching_pairs_label') }}</label>
+            <div id="matching-rows">
+                <div class="form-group" style="display:flex; gap:10px;">
+                    <input type="text" name="term[]" placeholder="{{ t('term_placeholder') }}">
+                    <input type="text" name="definition[]" placeholder="{{ t('definition_placeholder') }}">
+                </div>
+                <div class="form-group" style="display:flex; gap:10px;">
+                    <input type="text" name="term[]" placeholder="{{ t('term_placeholder') }}">
+                    <input type="text" name="definition[]" placeholder="{{ t('definition_placeholder') }}">
+                </div>
+                <div class="form-group" style="display:flex; gap:10px;">
+                    <input type="text" name="term[]" placeholder="{{ t('term_placeholder') }}">
+                    <input type="text" name="definition[]" placeholder="{{ t('definition_placeholder') }}">
+                </div>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addMatchingRow()">{{ t('add_pair_btn') }}</button>
+            <p style="color:#64748b; font-size:13px; margin-top:8px;">{{ t('matching_hint') }}</p>
+        </div>
+
+        <!-- حقول سؤال الترتيب -->
+        <div id="ordering-fields" style="display:none;">
+            <label>{{ t('ordering_items_label') }}</label>
+            <div id="ordering-rows">
+                <div class="form-group"><input type="text" name="order_item[]" placeholder="1. {{ t('order_item_placeholder') }}"></div>
+                <div class="form-group"><input type="text" name="order_item[]" placeholder="2. {{ t('order_item_placeholder') }}"></div>
+                <div class="form-group"><input type="text" name="order_item[]" placeholder="3. {{ t('order_item_placeholder') }}"></div>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addOrderingRow()">{{ t('add_order_item_btn') }}</button>
+            <p style="color:#64748b; font-size:13px; margin-top:8px;">{{ t('ordering_hint') }}</p>
+        </div>
+
+        <!-- حقل سؤال الإجابة القصيرة -->
+        <div id="short-answer-fields" style="display:none;">
+            <div class="form-group">
+                <label>{{ t('short_answer_key_label') }}</label>
+                <input type="text" name="short_answer_key">
+                <small style="color:#64748b;">{{ t('short_answer_hint') }}</small>
+            </div>
+        </div>
+
+        <div class="form-group" id="points-group">
+            <label>{{ t('points') }}</label>
+            <input type="number" name="points" value="1" min="1">
+        </div>
+
+        <button type="submit" class="btn btn-primary">{{ t('add_question_btn') }}</button>
+    </form>
+</div>
+
+<div class="card">
+    <h3>{{ t('current_questions') }} ({{ exam.questions|length }}) — {{ t('total_points_label') }}: {{ exam.total_points }}</h3>
+
+    {% if exam.questions|length > 5 %}
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+        <select id="qtype-filter" onchange="filterQuestionsList()" style="width:auto;">
+            <option value="">{{ t('all_types') }}</option>
+            <option value="mcq">{{ t('type_mcq') }}</option>
+            <option value="true_false">{{ t('type_true_false') }}</option>
+            <option value="short_answer">{{ t('type_short_answer') }}</option>
+            <option value="essay">{{ t('type_essay') }}</option>
+            <option value="matching">{{ t('type_matching') }}</option>
+            <option value="ordering">{{ t('type_ordering') }}</option>
+        </select>
+        <input type="text" id="question-search" onkeyup="filterQuestionsList()" placeholder="{{ t('search_questions_placeholder') }}" style="max-width:220px;">
+    </div>
+    {% endif %}
+
+    {% for q in exam.questions %}
+    <div class="question-card question-row" data-type="{{ q.question_type }}">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+            <div style="flex:1;">
+                <b>{{ loop.index }}. {{ q.text }}</b>
+                <span class="badge {{ 'badge-teacher' if q.question_type == 'mcq' else ('badge-warn' if q.question_type == 'essay' else ('badge-admin' if q.question_type == 'true_false' else 'badge-student')) }}">
+                    {% if q.question_type == 'mcq' %}{{ t('type_mcq') }}
+                    {% elif q.question_type == 'essay' %}{{ t('type_essay') }}
+                    {% elif q.question_type == 'true_false' %}{{ t('type_true_false') }}
+                    {% elif q.question_type == 'ordering' %}{{ t('type_ordering') }}
+                    {% elif q.question_type == 'short_answer' %}{{ t('type_short_answer') }}
+                    {% else %}{{ t('type_matching') }}{% endif %}
+                </span>
+                ({{ q.points }} {{ t('points') }})
+
+                {% if q.image_url %}
+                <div style="margin-top:8px;">
+                    <img src="{{ url_for('static', filename=q.image_url) }}" style="max-width:250px; border-radius:6px; border:1px solid #e2e8f0;">
+                </div>
+                {% endif %}
+
+                {% if q.question_type == 'mcq' %}
+                <ul>
+                    <li{% if q.correct_option == 'a' %} style="color:green;font-weight:bold;"{% endif %}>أ: {{ q.option_a }}</li>
+                    <li{% if q.correct_option == 'b' %} style="color:green;font-weight:bold;"{% endif %}>ب: {{ q.option_b }}</li>
+                    {% if q.option_c %}<li{% if q.correct_option == 'c' %} style="color:green;font-weight:bold;"{% endif %}>ج: {{ q.option_c }}</li>{% endif %}
+                    {% if q.option_d %}<li{% if q.correct_option == 'd' %} style="color:green;font-weight:bold;"{% endif %}>د: {{ q.option_d }}</li>{% endif %}
+                </ul>
+                {% elif q.question_type == 'true_false' %}
+                <p style="font-weight:bold; color:green;">
+                    {{ t('correct_answer') }}: {{ t('true_label') if q.correct_option == 't' else t('false_label') }}
+                </p>
+                {% elif q.question_type == 'matching' %}
+                <ul>
+                    {% for pair in q.get_matching_pairs() %}
+                    <li>{{ pair.term }} ← <b>{{ pair.definition }}</b></li>
+                    {% endfor %}
+                </ul>
+                {% elif q.question_type == 'ordering' %}
+                <ol>
+                    {% for item in q.get_ordering_items() %}
+                    <li>{{ item }}</li>
+                    {% endfor %}
+                </ol>
+                {% elif q.question_type == 'short_answer' %}
+                <p style="font-weight:bold; color:green;">{{ t('correct_answer') }}: {{ q.short_answer_key }}</p>
+                {% else %}
+                <p style="color:#64748b;">{{ t('essay_manual_note') }}</p>
+                {% endif %}
+            </div>
+            <form method="POST" action="{{ url_for('teacher_delete_question', question_id=q.id) }}"
+                  onsubmit="return confirm('{{ t('confirm_delete_question') }}');">
+                <button class="btn btn-danger btn-sm">{{ t('delete') }}</button>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <p>{{ t('no_questions_yet') }}</p>
+    {% endfor %}
+</div>
+
+<a href="{{ url_for('teacher_dashboard') }}" class="btn btn-secondary">{{ t('back') }}</a>
+
+<script>
+function toggleQuestionType() {
+    const type = document.getElementById('question_type').value;
+    document.getElementById('mcq-fields').style.display = (type === 'mcq') ? 'block' : 'none';
+    document.getElementById('true-false-fields').style.display = (type === 'true_false') ? 'block' : 'none';
+    document.getElementById('matching-fields').style.display = (type === 'matching') ? 'block' : 'none';
+    document.getElementById('ordering-fields').style.display = (type === 'ordering') ? 'block' : 'none';
+    document.getElementById('short-answer-fields').style.display = (type === 'short_answer') ? 'block' : 'none';
+
+    document.querySelector('input[name="option_a"]').required = (type === 'mcq');
+    document.querySelector('input[name="option_b"]').required = (type === 'mcq');
+}
+
+function addMatchingRow() {
+    const container = document.getElementById('matching-rows');
+    const row = document.createElement('div');
+    row.className = 'form-group';
+    row.style.cssText = 'display:flex; gap:10px;';
+    row.innerHTML = `
+        <input type="text" name="term[]" placeholder="{{ t('term_placeholder') }}">
+        <input type="text" name="definition[]" placeholder="{{ t('definition_placeholder') }}">
+    `;
+    container.appendChild(row);
+}
+
+function addOrderingRow() {
+    const container = document.getElementById('ordering-rows');
+    const row = document.createElement('div');
+    row.className = 'form-group';
+    const nextNum = container.children.length + 1;
+    row.innerHTML = `<input type="text" name="order_item[]" placeholder="${nextNum}. {{ t('order_item_placeholder') }}">`;
+    container.appendChild(row);
+}
+
+toggleQuestionType();
+
+function filterQuestionsList() {
+    var type = document.getElementById('qtype-filter') ? document.getElementById('qtype-filter').value : '';
+    var query = document.getElementById('question-search') ? document.getElementById('question-search').value.trim().toLowerCase() : '';
+    document.querySelectorAll('.question-row').forEach(function (row) {
+        var matchesType = !type || row.dataset.type === type;
+        var matchesSearch = !query || row.textContent.toLowerCase().includes(query);
+        row.style.display = (matchesType && matchesSearch) ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

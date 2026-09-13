@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}{{ t('add_to_bank') }}{% endblock %}
+{% block content %}
+<h1>{{ t('add_to_bank') }}</h1>
+
+<div class="card">
+    <form method="POST" enctype="multipart/form-data" id="question-form">
+        <div class="form-group">
+            <label>{{ t('question_type') }}</label>
+            <select name="question_type" id="question_type" onchange="toggleQuestionType()">
+                <option value="mcq">{{ t('type_mcq') }}</option>
+                <option value="true_false">{{ t('type_true_false') }}</option>
+                <option value="short_answer">{{ t('type_short_answer') }}</option>
+                <option value="essay">{{ t('type_essay') }}</option>
+                <option value="matching">{{ t('type_matching') }}</option>
+                <option value="ordering">{{ t('type_ordering') }}</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>{{ t('question_text') }}</label>
+            <textarea name="text" rows="2" required></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>{{ t('question_image_optional') }}</label>
+            <input type="file" name="image" accept="image/png,image/jpeg,image/gif,image/webp">
+            <small style="color:#64748b;">{{ t('question_image_hint') }}</small>
+        </div>
+
+        <div id="mcq-fields">
+            <div class="form-group"><label>{{ t('option_a') }}</label><input type="text" name="option_a"></div>
+            <div class="form-group"><label>{{ t('option_b') }}</label><input type="text" name="option_b"></div>
+            <div class="form-group"><label>{{ t('option_c') }}</label><input type="text" name="option_c"></div>
+            <div class="form-group"><label>{{ t('option_d') }}</label><input type="text" name="option_d"></div>
+            <div class="form-group">
+                <label>{{ t('correct_answer') }}</label>
+                <select name="correct_option">
+                    <option value="a">أ / A</option>
+                    <option value="b">ب / B</option>
+                    <option value="c">ج / C</option>
+                    <option value="d">د / D</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="true-false-fields" style="display:none;">
+            <div class="form-group">
+                <label>{{ t('true_false_correct_answer') }}</label>
+                <select name="true_false_correct">
+                    <option value="t">{{ t('true_label') }}</option>
+                    <option value="f">{{ t('false_label') }}</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="matching-fields" style="display:none;">
+            <label>{{ t('matching_pairs_label') }}</label>
+            <div id="matching-rows">
+                <div class="form-group" style="display:flex; gap:10px;">
+                    <input type="text" name="term[]" placeholder="{{ t('term_placeholder') }}">
+                    <input type="text" name="definition[]" placeholder="{{ t('definition_placeholder') }}">
+                </div>
+                <div class="form-group" style="display:flex; gap:10px;">
+                    <input type="text" name="term[]" placeholder="{{ t('term_placeholder') }}">
+                    <input type="text" name="definition[]" placeholder="{{ t('definition_placeholder') }}">
+                </div>
+                <div class="form-group" style="display:flex; gap:10px;">
+                    <input type="text" name="term[]" placeholder="{{ t('term_placeholder') }}">
+                    <input type="text" name="definition[]" placeholder="{{ t('definition_placeholder') }}">
+                </div>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addMatchingRow()">{{ t('add_pair_btn') }}</button>
+            <p style="color:#64748b; font-size:13px; margin-top:8px;">{{ t('matching_hint') }}</p>
+        </div>
+
+        <div id="ordering-fields" style="display:none;">
+            <label>{{ t('ordering_items_label') }}</label>
+            <div id="ordering-rows">
+                <div class="form-group"><input type="text" name="order_item[]" placeholder="1. {{ t('order_item_placeholder') }}"></div>
+                <div class="form-group"><input type="text" name="order_item[]" placeholder="2. {{ t('order_item_placeholder') }}"></div>
+                <div class="form-group"><input type="text" name="order_item[]" placeholder="3. {{ t('order_item_placeholder') }}"></div>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addOrderingRow()">{{ t('add_order_item_btn') }}</button>
+            <p style="color:#64748b; font-size:13px; margin-top:8px;">{{ t('ordering_hint') }}</p>
+        </div>
+
+        <div id="short-answer-fields" style="display:none;">
+            <div class="form-group">
+                <label>{{ t('short_answer_key_label') }}</label>
+                <input type="text" name="short_answer_key">
+                <small style="color:#64748b;">{{ t('short_answer_hint') }}</small>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>{{ t('points') }}</label>
+            <input type="number" name="points" value="1" min="1">
+        </div>
+
+        <div class="form-group">
+            <label>{{ t('subject_optional_field') }}</label>
+            <select name="subject_id">
+                <option value="">{{ t('no_subject_option') }}</option>
+                {% for subj in subjects %}
+                <option value="{{ subj.id }}">{{ subj.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>{{ t('difficulty') }}</label>
+            <select name="difficulty">
+                <option value="easy">{{ t('difficulty_easy') }}</option>
+                <option value="medium" selected>{{ t('difficulty_medium') }}</option>
+                <option value="hard">{{ t('difficulty_hard') }}</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>{{ t('keywords_field') }}</label>
+            <input type="text" name="keywords">
+            <small style="color:#64748b;">{{ t('keywords_hint') }}</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary">{{ t('save') }}</button>
+        <a href="{{ url_for('teacher_bank') }}" class="btn btn-secondary">{{ t('cancel') }}</a>
+    </form>
+</div>
+
+<script>
+function toggleQuestionType() {
+    const type = document.getElementById('question_type').value;
+    document.getElementById('mcq-fields').style.display = (type === 'mcq') ? 'block' : 'none';
+    document.getElementById('true-false-fields').style.display = (type === 'true_false') ? 'block' : 'none';
+    document.getElementById('matching-fields').style.display = (type === 'matching') ? 'block' : 'none';
+    document.getElementById('ordering-fields').style.display = (type === 'ordering') ? 'block' : 'none';
+    document.getElementById('short-answer-fields').style.display = (type === 'short_answer') ? 'block' : 'none';
+
+    document.querySelector('input[name="option_a"]').required = (type === 'mcq');
+    document.querySelector('input[name="option_b"]').required = (type === 'mcq');
+}
+
+function addMatchingRow() {
+    const container = document.getElementById('matching-rows');
+    const row = document.createElement('div');
+    row.className = 'form-group';
+    row.style.cssText = 'display:flex; gap:10px;';
+    row.innerHTML = `
+        <input type="text" name="term[]" placeholder="{{ t('term_placeholder') }}">
+        <input type="text" name="definition[]" placeholder="{{ t('definition_placeholder') }}">
+    `;
+    container.appendChild(row);
+}
+
+function addOrderingRow() {
+    const container = document.getElementById('ordering-rows');
+    const row = document.createElement('div');
+    row.className = 'form-group';
+    const nextNum = container.children.length + 1;
+    row.innerHTML = `<input type="text" name="order_item[]" placeholder="${nextNum}. {{ t('order_item_placeholder') }}">`;
+    container.appendChild(row);
+}
+
+toggleQuestionType();
+</script>
+{% endblock %}

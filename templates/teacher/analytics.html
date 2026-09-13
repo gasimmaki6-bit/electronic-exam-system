@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}{{ t('analytics_title') }}: {{ exam.title }}{% endblock %}
+{% block content %}
+<h1>{{ t('analytics_title') }}: {{ exam.title }}</h1>
+
+{% if data.submissions_count == 0 %}
+<div class="card">{{ t('no_results_for_analytics') }}</div>
+{% else %}
+
+<div class="stats-grid">
+    <div class="stat-card"><div class="stat-num">{{ data.submissions_count }}</div><div class="stat-label">{{ t('participants_count') }}</div></div>
+    <div class="stat-card"><div class="stat-num">{{ data.average_pct }}%</div><div class="stat-label">{{ t('average_pct') }}</div></div>
+    <div class="stat-card"><div class="stat-num">{{ data.median_pct }}%</div><div class="stat-label">{{ t('median_pct') }}</div></div>
+    <div class="stat-card"><div class="stat-num">{{ data.highest_pct }}%</div><div class="stat-label">{{ t('highest_pct') }}</div></div>
+    <div class="stat-card"><div class="stat-num">{{ data.lowest_pct }}%</div><div class="stat-label">{{ t('lowest_pct') }}</div></div>
+    <div class="stat-card"><div class="stat-num">{{ data.pass_count }} / {{ data.fail_count }}</div><div class="stat-label">{{ t('pass_fail') }}</div></div>
+    <div class="stat-card"><div class="stat-num">{{ data.avg_duration_minutes }}</div><div class="stat-label">{{ t('avg_duration') }}</div></div>
+    <div class="stat-card"><div class="stat-num">{{ data.avg_violations }}</div><div class="stat-label">{{ t('avg_violations') }}</div></div>
+    <div class="stat-card"><div class="stat-num">{{ data.auto_submitted_count }}</div><div class="stat-label">{{ t('auto_submitted_count') }}</div></div>
+    {% if data.pending_grading_count %}
+    <div class="stat-card" style="border-color:#d97706;"><div class="stat-num" style="color:#d97706;">{{ data.pending_grading_count }}</div><div class="stat-label">{{ t('pending_grading') }}</div></div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>{{ t('score_distribution') }}</h3>
+    <canvas id="scoreDistChart" height="90"></canvas>
+</div>
+
+<div class="card">
+    <h3>{{ t('question_difficulty') }}</h3>
+    <canvas id="questionChart" height="100"></canvas>
+    <table style="margin-top:16px;">
+        <thead><tr><th>{{ t('question_num') }}</th><th>{{ t('question_text_col') }}</th><th>{{ t('question_type_col') }}</th><th>{{ t('correct_pct_col') }}</th></tr></thead>
+        <tbody>
+        {% for q in data.questions %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ q.text[:60] }}{{ '…' if q.text|length > 60 else '' }}</td>
+                <td>
+                    {% if q.type == 'mcq' %}{{ t('type_mcq') }}
+                    {% elif q.type == 'essay' %}{{ t('type_essay') }}
+                    {% elif q.type == 'true_false' %}{{ t('type_true_false') }}
+                    {% elif q.type == 'ordering' %}{{ t('type_ordering') }}
+                    {% elif q.type == 'short_answer' %}{{ t('type_short_answer') }}
+                    {% else %}{{ t('type_matching') }}{% endif %}
+                </td>
+                <td>
+                    {% if q.correct_pct is none %}
+                        <span class="badge badge-warn">{{ t('pending_manual') }}</span>
+                    {% else %}
+                        {{ q.correct_pct }}%
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h3>{{ t('student_results_breakdown') }}</h3>
+    <table>
+        <thead><tr><th>{{ t('student_col') }}</th><th>{{ t('score_col') }}</th><th>{{ t('percentage_col') }}</th><th>{{ t('violations_col') }}</th><th>{{ t('auto_submitted_col') }}</th></tr></thead>
+        <tbody>
+        {% for row in data.student_rows %}
+            <tr>
+                <td>{{ row.name }}</td>
+                <td>{{ row.score }} / {{ row.total }}</td>
+                <td>{{ row.pct }}%</td>
+                <td>{% if row.violations > 0 %}<span class="badge badge-warn">{{ row.violations }}</span>{% else %}0{% endif %}</td>
+                <td>{{ (t('yes') + ' ⚠️') if row.auto else t('no') }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+    if (typeof Chart !== 'undefined') {
+        const bucketLabels = {{ data.score_buckets.keys()|list|tojson }};
+        const bucketValues = {{ data.score_buckets.values()|list|tojson }};
+
+        new Chart(document.getElementById('scoreDistChart'), {
+            type: 'bar',
+            data: {
+                labels: bucketLabels,
+                datasets: [{ label: '{{ t("students") }}', data: bucketValues, backgroundColor: '#2563eb' }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+
+        const qValues = {{ data.questions|map(attribute='correct_pct')|list|tojson }};
+
+        new Chart(document.getElementById('questionChart'), {
+            type: 'bar',
+            data: {
+                labels: qValues.map((v, i) => 'Q' + (i + 1)),
+                datasets: [{
+                    label: '{{ t("correct_pct_col") }} %',
+                    data: qValues.map(v => v === null ? 0 : v),
+                    backgroundColor: '#16a34a'
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { max: 100 } } }
+        });
+    }
+</script>
+{% endif %}
+
+<a href="{{ url_for('teacher_dashboard') }}" class="btn btn-secondary">{{ t('back') }}</a>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ t('exam_results_title') }}: {{ exam.title }}{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <h1>{{ t('exam_results_title') }}: {{ exam.title }}</h1>
+    <div>
+        <a href="{{ url_for('teacher_exam_analytics', exam_id=exam.id) }}" class="btn btn-primary">{{ t('view_analytics') }}</a>
+        <a href="{{ url_for('teacher_exam_results_export', exam_id=exam.id) }}" class="btn btn-secondary">{{ t('export_csv') }}</a>
+    </div>
+</div>
+
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>{{ t('student_col') }}</th><th>{{ t('score_col') }}</th><th>{{ t('out_of_col') }}</th><th>{{ t('percentage_col') }}</th>
+                <th>{{ t('submitted_at_col') }}</th><th>{{ t('violations_col') }}</th><th>{{ t('auto_submitted_col') }}</th><th>{{ t('action_col') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for s in submissions %}
+            <tr>
+                <td>{{ s.student.full_name }}</td>
+                <td>{{ s.score }}</td>
+                <td>{{ s.total_points }}</td>
+                <td>{{ s.percentage }}%</td>
+                <td>{{ s.submitted_at }}</td>
+                <td>
+                    {% if s.violation_count > 0 %}
+                    <span class="badge badge-warn">{{ s.violation_count }}</span>
+                    {% else %}0{% endif %}
+                </td>
+                <td>{{ t('yes') + ' ⚠️' if s.auto_submitted else t('no') }}</td>
+                <td>
+                    {% if s.needs_manual_grading %}
+                        {% if s.manually_graded %}
+                        <a href="{{ url_for('teacher_grade_submission', submission_id=s.id) }}" class="btn btn-secondary btn-sm">{{ t('review_grading') }}</a>
+                        {% else %}
+                        <a href="{{ url_for('teacher_grade_submission', submission_id=s.id) }}" class="btn btn-danger btn-sm">{{ t('grade_essay') }}</a>
+                        {% endif %}
+                    {% endif %}
+                </td>
+            </tr>
+        {% else %}
+            <tr><td colspan="8">{{ t('no_results_yet') }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<a href="{{ url_for('teacher_dashboard') }}" class="btn btn-secondary">{{ t('back') }}</a>
+{% endblock %}

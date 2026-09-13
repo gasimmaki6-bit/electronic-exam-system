@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ t('grade_essay_title') }}{% endblock %}
+{% block content %}
+<h1>{{ t('grade_essay_title') }}</h1>
+<p>{{ t('student_label') }}: <b>{{ submission.student.full_name }}</b> — {{ t('exam_label') }}: <b>{{ submission.exam.title }}</b></p>
+<p>{{ t('current_auto_score') }}: {{ submission.auto_score }} / {{ submission.total_points - essay_answers|sum(attribute='question.points') }}</p>
+
+<form method="POST">
+    {% for ans in essay_answers %}
+    <div class="card">
+        <b>{{ loop.index }}. {{ ans.question.text }}</b>
+        <span class="badge" style="background:#e2e8f0;color:#334155;">{{ t('out_of_col') }} {{ ans.question.points }} {{ t('points') }}</span>
+
+        {% if ans.question.image_url %}
+        <div style="margin:10px 0;">
+            <img src="{{ url_for('static', filename=ans.question.image_url) }}" style="max-width:250px; border-radius:6px;">
+        </div>
+        {% endif %}
+
+        <div class="card" style="background:#f8fafc; margin-top:10px;">
+            <p style="margin:0; white-space:pre-wrap;">{{ ans.text_answer or t('no_answer') }}</p>
+        </div>
+
+        <div class="form-group" style="max-width:200px; margin-top:12px;">
+            <label>{{ t('score_given', points=ans.question.points) }}</label>
+            <input type="number" name="score_{{ ans.id }}" min="0" max="{{ ans.question.points }}" step="0.5"
+                   value="{{ ans.manual_points if ans.manual_points is not none else '' }}">
+        </div>
+    </div>
+    {% else %}
+    <div class="card">{{ t('no_essay_questions') }}</div>
+    {% endfor %}
+
+    {% if essay_answers %}
+    <button type="submit" class="btn btn-primary">{{ t('save_grades_btn') }}</button>
+    {% endif %}
+</form>
+
+<a href="{{ url_for('teacher_exam_results', exam_id=submission.exam_id) }}" class="btn btn-secondary">{{ t('back') }}</a>
+{% endblock %}

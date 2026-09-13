@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}{{ t('teacher_dashboard') }}{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <h1>{{ t('my_exams') }} ({{ exams|length }})</h1>
+    <div>
+        <a href="{{ url_for('teacher_create_exam') }}" class="btn btn-primary">{{ t('create_exam_btn') }}</a>
+        <a href="{{ url_for('teacher_bank') }}" class="btn btn-secondary">{{ t('my_question_bank') }}</a>
+    </div>
+</div>
+
+{% if exams|length > 5 %}
+<div class="card">
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <select id="exam-status-filter" onchange="filterExams()" style="width:auto;">
+            <option value="">{{ t('all_statuses_filter') }}</option>
+            <option value="published">{{ t('exam_status_published') }}</option>
+            <option value="draft">{{ t('exam_status_draft') }}</option>
+        </select>
+        <input type="text" id="exam-search" onkeyup="filterExams()" placeholder="{{ t('search_exams_placeholder') }}" style="max-width:220px;">
+    </div>
+</div>
+{% endif %}
+
+{% for exam in exams %}
+<div class="card exam-row" data-status="{{ 'published' if exam.is_active else 'draft' }}">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+        <div>
+            <h3>{{ exam.title }}
+                {% if exam.is_active %}<span class="badge" style="background:#dcfce7;color:#166534;">✅ {{ t('exam_status_published') }}</span>
+                {% else %}<span class="badge" style="background:#fef3c7;color:#92400e;">📝 {{ t('exam_status_draft') }}</span>{% endif %}
+                {% if exam.subject %}<span class="badge badge-teacher">📚 {{ exam.subject.name }}</span>{% endif %}
+            </h3>
+            <p>{{ exam.description }}</p>
+            <p>{{ t('questions_count') }}: {{ exam.questions|length }} | {{ t('duration') }}: {{ exam.duration_minutes }} {{ t('minutes') }}</p>
+            {% if exam.start_time %}<p>{{ t('starts') }}: {{ exam.start_time }}</p>{% endif %}
+            {% if exam.end_time %}<p>{{ t('ends') }}: {{ exam.end_time }}</p>{% endif %}
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+            <a href="{{ url_for('teacher_add_question', exam_id=exam.id) }}" class="btn btn-primary btn-sm">{{ t('manage_questions') }}</a>
+            <a href="{{ url_for('teacher_exam_results', exam_id=exam.id) }}" class="btn btn-secondary btn-sm">{{ t('results') }}</a>
+            <form method="POST" action="{{ url_for('teacher_duplicate_exam', exam_id=exam.id) }}">
+                <button class="btn btn-secondary btn-sm" style="width:100%;">{{ t('duplicate_exam_btn') }}</button>
+            </form>
+            <form method="POST" action="{{ url_for('teacher_toggle_exam', exam_id=exam.id) }}">
+                <button class="btn btn-sm {{ 'btn-danger' if exam.is_active else 'btn-success' }}" style="width:100%;">
+                    {{ t('unpublish_exam_btn') if exam.is_active else t('publish_exam_btn') }}
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card">{{ t('no_exams_yet') }}</div>
+{% endfor %}
+
+<script>
+function filterExams() {
+    var status = document.getElementById('exam-status-filter') ? document.getElementById('exam-status-filter').value : '';
+    var query = document.getElementById('exam-search') ? document.getElementById('exam-search').value.trim().toLowerCase() : '';
+    document.querySelectorAll('.exam-row').forEach(function (row) {
+        var matchesStatus = !status || row.dataset.status === status;
+        var matchesSearch = !query || row.textContent.toLowerCase().includes(query);
+        row.style.display = (matchesStatus && matchesSearch) ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

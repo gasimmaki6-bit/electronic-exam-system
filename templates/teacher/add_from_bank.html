@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ t('add_from_bank') }}: {{ exam.title }}{% endblock %}
+{% block content %}
+<h1>{{ t('add_from_bank') }}: {{ exam.title }}</h1>
+<p>{{ t('select_questions_to_add') }}</p>
+
+<div class="card">
+    <form method="GET" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+        <div class="form-group" style="min-width:160px; margin-bottom:0;">
+            <label>{{ t('filter_by_subject') }}</label>
+            <select name="subject_id">
+                <option value="">{{ t('all_subjects') }}</option>
+                {% for subj in subjects %}
+                <option value="{{ subj.id }}" {{ 'selected' if filters.subject_id|string == subj.id|string else '' }}>{{ subj.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="min-width:140px; margin-bottom:0;">
+            <label>{{ t('filter_by_difficulty') }}</label>
+            <select name="difficulty">
+                <option value="">{{ t('all_difficulties') }}</option>
+                <option value="easy" {{ 'selected' if filters.difficulty == 'easy' else '' }}>{{ t('difficulty_easy') }}</option>
+                <option value="medium" {{ 'selected' if filters.difficulty == 'medium' else '' }}>{{ t('difficulty_medium') }}</option>
+                <option value="hard" {{ 'selected' if filters.difficulty == 'hard' else '' }}>{{ t('difficulty_hard') }}</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">{{ t('apply_filters') }}</button>
+    </form>
+</div>
+
+<form method="POST">
+    {% for q in bank_questions %}
+    <div class="question-card">
+        <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer;">
+            <input type="checkbox" name="bank_ids[]" value="{{ q.id }}" style="margin-top:4px;">
+            <span style="flex:1;">
+                <b>{{ q.text }}</b>
+                <span class="badge badge-teacher">
+                    {% if q.question_type == 'mcq' %}{{ t('type_mcq') }}
+                    {% elif q.question_type == 'true_false' %}{{ t('type_true_false') }}
+                    {% elif q.question_type == 'short_answer' %}{{ t('type_short_answer') }}
+                    {% elif q.question_type == 'essay' %}{{ t('type_essay') }}
+                    {% elif q.question_type == 'ordering' %}{{ t('type_ordering') }}
+                    {% else %}{{ t('type_matching') }}{% endif %}
+                </span>
+                <span class="badge badge-warn">
+                    {% if q.difficulty == 'easy' %}{{ t('difficulty_easy') }}
+                    {% elif q.difficulty == 'hard' %}{{ t('difficulty_hard') }}
+                    {% else %}{{ t('difficulty_medium') }}{% endif %}
+                </span>
+                <span style="color:#64748b;"> — {{ q.points }} {{ t('points') }}</span>
+            </span>
+        </label>
+    </div>
+    {% else %}
+    <div class="card">{{ t('no_questions_match_filters') }}</div>
+    {% endfor %}
+
+    {% if bank_questions %}
+    <button type="submit" class="btn btn-primary">{{ t('add_selected_to_exam') }}</button>
+    {% endif %}
+</form>
+
+<a href="{{ url_for('teacher_add_question', exam_id=exam.id) }}" class="btn btn-secondary">{{ t('back') }}</a>
+{% endblock %}

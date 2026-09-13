@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ t('create_exam_title') }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width:600px;">
+    <h2>{{ t('create_exam_title') }}</h2>
+    <form method="POST">
+        <div class="form-group">
+            <label>{{ t('subject_optional_field') }}</label>
+            <select name="subject_id">
+                <option value="">{{ t('no_subject_option') }}</option>
+                {% for subj in subjects %}
+                <option value="{{ subj.id }}">{{ subj.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>{{ t('exam_title_field') }}</label>
+            <input type="text" name="title" required>
+        </div>
+        <div class="form-group">
+            <label>{{ t('exam_description_field') }}</label>
+            <textarea name="description" rows="3"></textarea>
+        </div>
+        <div class="form-group">
+            <label>{{ t('duration_minutes_field') }}</label>
+            <input type="number" name="duration_minutes" value="30" min="1" required>
+        </div>
+        <div class="form-group">
+            <label>{{ t('start_time_optional') }}</label>
+            <input type="datetime-local" name="start_time">
+        </div>
+        <div class="form-group">
+            <label>{{ t('end_time_optional') }}</label>
+            <input type="datetime-local" name="end_time">
+        </div>
+        <div class="form-group">
+            <label><input type="checkbox" name="shuffle_questions" checked style="width:auto;"> {{ t('shuffle_questions_field') }}</label>
+        </div>
+        <div class="form-group">
+            <label><input type="checkbox" name="shuffle_options" checked style="width:auto;"> {{ t('shuffle_options_field') }}</label>
+        </div>
+        <button type="submit" class="btn btn-primary">{{ t('create_continue_btn') }}</button>
+        <a href="{{ url_for('teacher_dashboard') }}" class="btn btn-secondary">{{ t('cancel') }}</a>
+    </form>
+</div>
+{% endblock %}

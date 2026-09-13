@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}{{ t('question_bank_title') }}{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <h1>{{ t('question_bank_title') }}</h1>
+    <div>
+        <a href="{{ url_for('teacher_bank_create') }}" class="btn btn-primary">{{ t('add_to_bank') }}</a>
+        <a href="{{ url_for('teacher_bank_import') }}" class="btn btn-secondary">{{ t('import_csv') }}</a>
+        <a href="{{ url_for('teacher_bank_export') }}" class="btn btn-secondary">{{ t('export_csv') }}</a>
+    </div>
+</div>
+
+<div class="card">
+    <form method="GET" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+        <div class="form-group" style="min-width:160px; margin-bottom:0;">
+            <label>{{ t('filter_by_subject') }}</label>
+            <select name="subject_id">
+                <option value="">{{ t('all_subjects') }}</option>
+                {% for subj in subjects %}
+                <option value="{{ subj.id }}" {{ 'selected' if filters.subject_id|string == subj.id|string else '' }}>{{ subj.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="min-width:160px; margin-bottom:0;">
+            <label>{{ t('filter_by_type') }}</label>
+            <select name="type">
+                <option value="">{{ t('all_types') }}</option>
+                <option value="mcq" {{ 'selected' if filters.type == 'mcq' else '' }}>{{ t('type_mcq') }}</option>
+                <option value="true_false" {{ 'selected' if filters.type == 'true_false' else '' }}>{{ t('type_true_false') }}</option>
+                <option value="short_answer" {{ 'selected' if filters.type == 'short_answer' else '' }}>{{ t('type_short_answer') }}</option>
+                <option value="essay" {{ 'selected' if filters.type == 'essay' else '' }}>{{ t('type_essay') }}</option>
+                <option value="matching" {{ 'selected' if filters.type == 'matching' else '' }}>{{ t('type_matching') }}</option>
+                <option value="ordering" {{ 'selected' if filters.type == 'ordering' else '' }}>{{ t('type_ordering') }}</option>
+            </select>
+        </div>
+        <div class="form-group" style="min-width:140px; margin-bottom:0;">
+            <label>{{ t('filter_by_difficulty') }}</label>
+            <select name="difficulty">
+                <option value="">{{ t('all_difficulties') }}</option>
+                <option value="easy" {{ 'selected' if filters.difficulty == 'easy' else '' }}>{{ t('difficulty_easy') }}</option>
+                <option value="medium" {{ 'selected' if filters.difficulty == 'medium' else '' }}>{{ t('difficulty_medium') }}</option>
+                <option value="hard" {{ 'selected' if filters.difficulty == 'hard' else '' }}>{{ t('difficulty_hard') }}</option>
+            </select>
+        </div>
+        <div class="form-group" style="min-width:140px; margin-bottom:0;">
+            <label>{{ t('status') }}</label>
+            <select name="status">
+                <option value="active" {{ 'selected' if filters.status == 'active' else '' }}>{{ t('status_active') }}</option>
+                <option value="archived" {{ 'selected' if filters.status == 'archived' else '' }}>{{ t('status_archived') }}</option>
+            </select>
+        </div>
+        <div class="form-group" style="min-width:200px; margin-bottom:0; flex:1;">
+            <label>{{ t('search_bank') }}</label>
+            <input type="text" name="search" value="{{ filters.search }}">
+        </div>
+        <button type="submit" class="btn btn-primary">{{ t('apply_filters') }}</button>
+    </form>
+</div>
+
+{% for q in questions %}
+<div class="question-card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+        <div style="flex:1;">
+            <b>{{ q.text }}</b>
+            <span class="badge badge-teacher">
+                {% if q.question_type == 'mcq' %}{{ t('type_mcq') }}
+                {% elif q.question_type == 'true_false' %}{{ t('type_true_false') }}
+                {% elif q.question_type == 'short_answer' %}{{ t('type_short_answer') }}
+                {% elif q.question_type == 'essay' %}{{ t('type_essay') }}
+                {% elif q.question_type == 'ordering' %}{{ t('type_ordering') }}
+                {% else %}{{ t('type_matching') }}{% endif %}
+            </span>
+            <span class="badge badge-warn">
+                {% if q.difficulty == 'easy' %}{{ t('difficulty_easy') }}
+                {% elif q.difficulty == 'hard' %}{{ t('difficulty_hard') }}
+                {% else %}{{ t('difficulty_medium') }}{% endif %}
+            </span>
+            {% if q.subject %}<span class="badge badge-student">📚 {{ q.subject.name }}</span>{% endif %}
+            {% if q.status == 'archived' %}<span class="badge" style="background:#e2e8f0;color:#334155;">{{ t('status_archived') }}</span>{% endif %}
+            <p style="color:#64748b; margin:6px 0 0;">{{ q.points }} {{ t('points') }}{% if q.keywords %} — {{ q.keywords }}{% endif %}</p>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+            <form method="POST" action="{{ url_for('teacher_bank_toggle_archive', bq_id=q.id) }}">
+                <button class="btn btn-secondary btn-sm" style="width:100%;">{{ t('unarchive') if q.status == 'archived' else t('archive') }}</button>
+            </form>
+            <form method="POST" action="{{ url_for('teacher_bank_delete', bq_id=q.id) }}"
+                  onsubmit="return confirm('{{ t('confirm_delete_bank_question') }}');">
+                <button class="btn btn-danger btn-sm" style="width:100%;">{{ t('delete') }}</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card">{{ t('no_bank_questions') }}</div>
+{% endfor %}
+
+<a href="{{ url_for('teacher_dashboard') }}" class="btn btn-secondary">{{ t('back') }}</a>
+{% endblock %}
